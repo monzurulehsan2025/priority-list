@@ -1,6 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, List, History, PlusCircle, Trash2 } from 'lucide-react'
+import { db } from './firebase'
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  deleteDoc,
+  doc,
+  getDocs,
+  writeBatch
+} from 'firebase/firestore'
 import './App.css'
 
 interface Entry {
@@ -14,51 +26,84 @@ function App() {
   const [view, setView] = useState<'post' | 'get'>('post')
   const [line1, setLine1] = useState('')
   const [line2, setLine2] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const handlePost = (e: React.FormEvent) => {
+  // Sync with Firestore
+  useEffect(() => {
+    const q = query(collection(db, 'entries'), orderBy('timestamp', 'desc'))
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newEntries = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          lines: data.lines,
+          timestamp: data.timestamp?.toDate() || new Date()
+        } as Entry
+      })
+      setEntries(newEntries)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!line1.trim() && !line2.trim()) return
 
-    const newEntry: Entry = {
-      id: crypto.randomUUID(),
-      lines: [line1, line2].filter(line => line.trim() !== ''),
-      timestamp: new Date()
-    }
+    const lines = [line1, line2].filter(line => line.trim() !== '')
 
-    setEntries(prev => [newEntry, ...prev])
-    setLine1('')
-    setLine2('')
-    
-    // Optional: show some feedback or switch view
-    // For now, just clear the form
+    try {
+      await addDoc(collection(db, 'entries'), {
+        lines,
+        timestamp: new Date()
+      })
+
+      setLine1('')
+      setLine2('')
+      // Switch to view posts after posting
+      setView('get')
+    } catch (error) {
+      console.error("Error adding document: ", error)
+      alert("Failed to save to Firebase. Please check your configuration.")
+    }
   }
 
-  const clearEntries = () => {
-    if (confirm('Are you sure you want to clear all data?')) {
-      setEntries([])
+  const clearEntries = async () => {
+    if (confirm('Are you sure you want to clear all data from Firebase?')) {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'entries'))
+        const batch = writeBatch(db)
+        querySnapshot.forEach((document) => {
+          batch.delete(doc(db, 'entries', document.id))
+        })
+        await batch.commit()
+      } catch (error) {
+        console.error("Error clearing entries: ", error)
+      }
     }
   }
 
   return (
     <div className="container">
-      <motion.header 
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <h1>Priority List</h1>
-        <p className="subtitle">Secure in-memory micro-logs with timestamping</p>
+        <p className="subtitle">Secure Cloud Logs with Firebase Firestore</p>
       </motion.header>
 
       <div className="nav-container glass-card">
-        <button 
+        <button
           className={view === 'post' ? 'primary' : 'secondary'}
           onClick={() => setView('post')}
         >
           <PlusCircle size={20} />
           Post Entry
         </button>
-        <button 
+        <button
           className={view === 'get' ? 'primary' : 'secondary'}
           onClick={() => setView('get')}
         >
@@ -80,7 +125,7 @@ function App() {
               <form onSubmit={handlePost}>
                 <div className="form-header">
                   <Send className="header-icon" />
-                  <h2>Create New Post</h2>
+                  <h2>Cloud Sync Post</h2>
                 </div>
                 <div className="input-group">
                   <label htmlFor="line1">Primary Thought</label>
@@ -104,7 +149,7 @@ function App() {
                   />
                 </div>
                 <button type="submit" disabled={!line1.trim() && !line2.trim()} className="primary submit-btn">
-                  Push to Memory
+                  Push to Firebase
                 </button>
               </form>
             </motion.div>
@@ -119,23 +164,27 @@ function App() {
               <div className="list-header">
                 <div className="header-title">
                   <List className="header-icon" />
-                  <h2>Stored Memories</h2>
+                  <h2>Cloud Memories</h2>
                 </div>
                 {entries.length > 0 && (
                   <button onClick={clearEntries} className="danger-text-btn">
-                    <Trash2 size={16} /> Clear All
+                    <Trash2 size={16} /> Clear Cloud
                   </button>
                 )}
               </div>
 
-              {entries.length === 0 ? (
+              {loading ? (
                 <div className="empty-state">
-                  <p>No logs found. Start by posting something!</p>
+                  <p>Syncing with Firebase...</p>
+                </div>
+              ) : entries.length === 0 ? (
+                <div className="empty-state">
+                  <p>No cloud logs found. Start by posting something!</p>
                 </div>
               ) : (
                 <div className="logs-list">
                   {entries.map((entry, index) => (
-                    <motion.div 
+                    <motion.div
                       key={entry.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -164,7 +213,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} Priority List. All data stored locally in session memory.</p>
+        <p>&copy; {new Date().getFullYear()} Priority List. All data synced with Firebase Firestore.</p>
       </footer>
     </div>
   )
