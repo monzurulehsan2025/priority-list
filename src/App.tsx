@@ -9,7 +9,7 @@ import {
   query,
   orderBy,
   deleteDoc,
-  doc,
+doc,
   getDocs,
   writeBatch
 } from 'firebase/firestore'
