@@ -8,8 +8,7 @@ import {
   onSnapshot,
   query,
   orderBy,
-  
-doc,
+  doc,
   getDocs,
   writeBatch
 } from 'firebase/firestore'
@@ -24,8 +23,7 @@ interface Entry {
 function App() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [view, setView] = useState<'post' | 'get'>('post')
-  const [line1, setLine1] = useState('')
-  const [line2, setLine2] = useState('')
+  const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
 
   // Sync with Firestore
@@ -49,9 +47,9 @@ function App() {
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!line1.trim() && !line2.trim()) return
+    if (!text.trim()) return
 
-    const lines = [line1, line2].filter(line => line.trim() !== '')
+    const lines = [text.trim()]
 
     try {
       await addDoc(collection(db, 'entries'), {
@@ -59,8 +57,7 @@ function App() {
         timestamp: new Date()
       })
 
-      setLine1('')
-      setLine2('')
+      setText('')
       // Switch to view posts after posting
       setView('get')
     } catch (error) {
@@ -128,27 +125,17 @@ function App() {
                   <h2>Cloud Sync Post</h2>
                 </div>
                 <div className="input-group">
-                  <label htmlFor="line1">Primary Thought</label>
+                  <label htmlFor="text">Entry Thought</label>
                   <input
-                    id="line1"
+                    id="text"
                     type="text"
-                    placeholder="What's on your mind? (Line 1)"
-                    value={line1}
-                    onChange={(e) => setLine1(e.target.value)}
+                    placeholder="What's on your mind?"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
                     autoFocus
                   />
                 </div>
-                <div className="input-group">
-                  <label htmlFor="line2">Additional Detail (Optional)</label>
-                  <input
-                    id="line2"
-                    type="text"
-                    placeholder="Any extra context? (Line 2)"
-                    value={line2}
-                    onChange={(e) => setLine2(e.target.value)}
-                  />
-                </div>
-                <button type="submit" disabled={!line1.trim() && !line2.trim()} className="primary submit-btn">
+                <button type="submit" disabled={!text.trim()} className="primary submit-btn">
                   Push to Firebase
                 </button>
               </form>
