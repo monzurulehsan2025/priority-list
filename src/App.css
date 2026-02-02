@@ -145,6 +145,35 @@
   gap: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin-bottom: 0;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.delete-item-btn {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.4rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  width: 28px;
+  height: 28px;
+}
+
+.delete-item-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  border-color: rgba(239, 68, 68, 0.2);
+  transform: scale(1.1);
+  box-shadow: none;
 }
 
 .date-sep {
