@@ -8,6 +8,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  deleteDoc,
   doc,
   getDocs,
   writeBatch
@@ -78,6 +79,14 @@ function App() {
       } catch (error) {
         console.error("Error clearing entries: ", error)
       }
+    }
+  }
+
+  const deleteEntry = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'entries', id))
+    } catch (error) {
+      console.error("Error deleting entry: ", error)
     }
   }
 
@@ -178,10 +187,19 @@ function App() {
                       transition={{ delay: index * 0.05 }}
                       className="log-item"
                     >
-                      <div className="log-timestamp">
-                        {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        <span className="date-sep">•</span>
-                        {entry.timestamp.toLocaleDateString()}
+                      <div className="log-header">
+                        <div className="log-timestamp">
+                          {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          <span className="date-sep">•</span>
+                          {entry.timestamp.toLocaleDateString()}
+                        </div>
+                        <button
+                          onClick={() => deleteEntry(entry.id)}
+                          className="delete-item-btn"
+                          title="Delete entry"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                       <div className="log-content">
                         {entry.lines.map((line, lIdx) => (
